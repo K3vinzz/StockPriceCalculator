@@ -1,5 +1,3 @@
-using System;
-
 namespace StockPriceCalculator.Domain.Stocks.Interfaces;
 
 public interface IMarketDataProvider

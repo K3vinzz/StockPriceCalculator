@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    // 目標 JS 版本
+    "target": "ESNext",
+    // 給 Vite / 瀏覽器 bundler 用
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    // 讓 import "vue"、import.meta.env 等型別正常
+    "types": [
+      "vite/client"
+    ],
+    // 嚴格型別檢查
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    // 路徑別名：@/ 對應 src/
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "src/*"
+      ]
+    }
+  },
+  // 告訴 TS 要去掃描哪些檔案
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "src/**/*.tsx",
+    "src/**/*.vue"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}

@@ -7,7 +7,7 @@ public class DailyStockPrice
     public int Id { get; private set; }
     public string Name { get; set; } = default!;
 
-    public StockSymbol Symbol { get; private set; } = default!;
+    public string Symbol { get; private set; } = default!;
     public DateOnly Date { get; private set; }
 
     public Money ClosePrice { get; private set; } = default!;
@@ -16,7 +16,7 @@ public class DailyStockPrice
     // For EF Core materialization
     private DailyStockPrice() { }
 
-    public DailyStockPrice(StockSymbol symbol, DateOnly date, Money closePrice, string name = "", string market = "unknown")
+    public DailyStockPrice(string symbol, DateOnly date, Money closePrice, string name = "", string market = "unknown")
     {
         Symbol = symbol;
         Date = date;

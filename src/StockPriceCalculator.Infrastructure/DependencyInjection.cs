@@ -26,6 +26,7 @@ public static class DependencyInjection
         // Repo
         services.AddScoped<IStockPriceRepository, StockPriceRepository>();
         services.AddScoped<IStockValuationRecordRepository, StockValuationRecordRepository>();
+        services.AddScoped<IStockInfoRepository, StockInfoRepository>();
 
         // Service
         services.AddScoped<StockListImportService>();

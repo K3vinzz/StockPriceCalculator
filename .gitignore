@@ -482,3 +482,45 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# --- Vue / Vite / Node (front-end) ---
+
+# Node modules
+node_modules/
+
+# Vite build output
+dist/
+dist-ssr/
+*.local
+
+# Env files
+.env.local
+.env.*.local
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# Editor directories
+.vscode/
+.idea/
+
+# Mac system files
+.DS_Store
+
+# TypeScript build info
+*.tsbuildinfo
+
+# pnpm store (optional but recommended)
+.pnpm-store/
+
+# Coverage output
+coverage/
+
+# Front-end lock files (should keep one, so don't ignore)
+# pnpm-lock.yaml ← 建議不要 ignore
+# package-lock.json
+# yarn.lock

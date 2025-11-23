@@ -7,7 +7,7 @@ public class StockValuationRecord
 {
     public Guid Id { get; private set; }
 
-    public StockSymbol Symbol { get; private set; } = default!;
+    public string Symbol { get; private set; } = default!;
     public DateOnly Date { get; private set; }
     public ShareQuantity Shares { get; private set; } = default!;
 
@@ -19,7 +19,7 @@ public class StockValuationRecord
     private StockValuationRecord() { }
 
     private StockValuationRecord(
-        StockSymbol symbol,
+        string symbol,
         DateOnly date,
         ShareQuantity shares,
         Money closePrice,
@@ -34,7 +34,7 @@ public class StockValuationRecord
     }
 
     public static StockValuationRecord Create(
-        StockSymbol symbol,
+        string symbol,
         DateOnly date,
         ShareQuantity shares,
         Money closePrice,

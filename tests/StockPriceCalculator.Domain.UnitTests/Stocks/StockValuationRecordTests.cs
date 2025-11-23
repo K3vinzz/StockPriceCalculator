@@ -10,7 +10,7 @@ public class StockValuationRecordTests
     public void Create_ShouldCalculateTotalAmount()
     {
         // arrange
-        var symbol = new StockSymbol("2330");
+        var symbol = "2330";
         var date = new DateOnly(2025, 1, 2);
         var shares = new ShareQuantity(1000);
         var close = new Money(610.5m, "TWD");

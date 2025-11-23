@@ -37,10 +37,10 @@ public class CalculateSettlementHandlerTests
     {
         // Given
         var command = new CalculateSettlementCommand("2330", new DateOnly(2025, 11, 20), 100, "TWSE");
-        var symbol = new StockSymbol(command.Symbol);
+        var symbol = command.Symbol;
         var tradeDate = command.TradeDate;
         _priceRepo
-            .GetDailyStockPriceAsync(symbol, tradeDate, Arg.Any<CancellationToken>())
+            .GetDailyStockPriceAsync(symbol, tradeDate)
             .Returns(new DailyStockPrice(
                 symbol,
                 tradeDate,
@@ -52,7 +52,7 @@ public class CalculateSettlementHandlerTests
         _clock.UtcNow.Returns(new DateTimeOffset(2025, 11, 21, 0, 0, 0, TimeSpan.Zero));
 
         // Act
-        var result = await _handler.HandleAsync(command, CancellationToken.None);
+        var result = await _handler.HandleAsync(command);
 
         // Assert
         await _marketDataProvider.DidNotReceive()
@@ -68,15 +68,15 @@ public class CalculateSettlementHandlerTests
     {
         // Given
         var command = new CalculateSettlementCommand("2330", new DateOnly(2025, 11, 20), 100, "TWSE");
-        var symbol = new StockSymbol(command.Symbol);
+        var symbol = command.Symbol;
         var tradeDate = command.TradeDate;
 
         _priceRepo
-            .GetDailyStockPriceAsync(symbol, tradeDate, Arg.Any<CancellationToken>())
+            .GetDailyStockPriceAsync(symbol, tradeDate)
             .ReturnsNull();
 
         _marketDataProvider
-            .GetTwseDaily(symbol.Value, tradeDate)
+            .GetTwseDaily(symbol, tradeDate)
             .Returns(
             [
                 new(
@@ -118,7 +118,7 @@ public class CalculateSettlementHandlerTests
         _clock.UtcNow.Returns(new DateTimeOffset(2025, 11, 21, 0, 0, 0, TimeSpan.Zero));
 
         // Act
-        var result = await _handler.HandleAsync(command, CancellationToken.None);
+        var result = await _handler.HandleAsync(command);
 
         // Assert
         await _marketDataProvider.Received(1).GetTwseDaily(Arg.Any<string>(), Arg.Any<DateOnly>());
@@ -134,15 +134,15 @@ public class CalculateSettlementHandlerTests
     {
         // Given
         var command = new CalculateSettlementCommand("2330", new DateOnly(2025, 11, 20), 100, "TWSE");
-        var symbol = new StockSymbol(command.Symbol);
+        var symbol = command.Symbol;
         var tradeDate = command.TradeDate;
 
         _priceRepo
-            .GetDailyStockPriceAsync(symbol, tradeDate, Arg.Any<CancellationToken>())
+            .GetDailyStockPriceAsync(symbol, tradeDate)
             .ReturnsNull();
 
         _marketDataProvider
-            .GetTwseDaily(symbol.Value, tradeDate)
+            .GetTwseDaily(symbol, tradeDate)
             .Returns(
             [
                 new(
@@ -197,7 +197,7 @@ public class CalculateSettlementHandlerTests
         _clock.UtcNow.Returns(new DateTimeOffset(2025, 11, 21, 0, 0, 0, TimeSpan.Zero));
 
         // Act
-        var result = await _handler.HandleAsync(command, CancellationToken.None);
+        var result = await _handler.HandleAsync(command);
 
         // Assert
         await _marketDataProvider.Received(1).GetTwseDaily(Arg.Any<string>(), Arg.Any<DateOnly>());
@@ -214,7 +214,7 @@ public class CalculateSettlementHandlerTests
 
     private static bool MatchExpectedPrices(
     IEnumerable<DailyStockPrice> list,
-    StockSymbol symbol)
+    string symbol)
     {
         var items = list.ToList();
         if (items.Count != 3) return false;

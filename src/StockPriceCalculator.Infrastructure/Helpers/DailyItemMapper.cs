@@ -23,7 +23,7 @@ public static class DailyItemMapper
 
         result = new DailyStockPrice(
             name: dto.Name,
-            symbol: new StockSymbol(dto.Code),
+            symbol: dto.Code,
             date: date,
             closePrice: new Money(close)
         );

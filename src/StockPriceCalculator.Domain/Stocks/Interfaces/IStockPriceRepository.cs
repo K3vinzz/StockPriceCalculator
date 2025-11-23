@@ -4,11 +4,11 @@ namespace StockPriceCalculator.Domain.Stocks.Interfaces;
 
 public interface IStockPriceRepository
 {
-    Task<DailyStockPrice?> GetDailyStockPriceAsync(StockSymbol symbol, DateOnly date, CancellationToken cancellationToken);
+    Task<DailyStockPrice?> GetDailyStockPriceAsync(string symbol, DateOnly date);
 
     Task AddStocksAsync(IEnumerable<Stock> stocks);
 
-    Task<List<DailyStockPrice>> GetDailyStockPricesByMonth(StockSymbol symbol, DateOnly date);
+    Task<List<DailyStockPrice>> GetDailyStockPricesByMonth(string symbol, DateOnly date);
 
     Task AddDailyStockPrices(IEnumerable<DailyStockPrice> dailyStockPrices);
 }

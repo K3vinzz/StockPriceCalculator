@@ -26,6 +26,7 @@ public class MarketDataProviderTests
 
         var fakeResponse = new TwseStockDayResponse
         {
+            Stat = "OK",
             Data =
             [
                 [
@@ -91,17 +92,17 @@ public class MarketDataProviderTests
         Assert.Equal(3, result.Count);
 
         var first = result[0];
-        Assert.Equal(new StockSymbol("2330"), first.Symbol);
+        Assert.Equal("2330", first.Symbol);
         Assert.Equal(new DateOnly(2025, 11, 19), first.Date);
         Assert.Equal(1395m, first.ClosePrice.Amount);
 
         var second = result[1];
-        Assert.Equal(new StockSymbol("2330"), second.Symbol);
+        Assert.Equal("2330", second.Symbol);
         Assert.Equal(new DateOnly(2025, 11, 20), second.Date);
         Assert.Equal(1455m, second.ClosePrice.Amount);
 
         var third = result[2];
-        Assert.Equal(new StockSymbol("2330"), third.Symbol);
+        Assert.Equal("2330", third.Symbol);
         Assert.Equal(new DateOnly(2025, 11, 21), third.Date);
         Assert.Equal(1385m, third.ClosePrice.Amount);
 

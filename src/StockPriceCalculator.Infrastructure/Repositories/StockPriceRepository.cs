@@ -20,7 +20,7 @@ public class StockPriceRepository : IStockPriceRepository
     {
         var entities = dailyStockPrices.Select(x => new DailyStockPriceEntity
         {
-            Symbol = x.Symbol.Value,
+            Symbol = x.Symbol,
             Name = x.Name,
             TradeDate = x.Date,
             ClosePrice = x.ClosePrice.Amount,
@@ -45,7 +45,7 @@ public class StockPriceRepository : IStockPriceRepository
 
             return new StockEntity
             {
-                Symbol = s.Symbol.Value,
+                Symbol = s.Symbol,
                 Name = s.Name,
                 Market = marketCode
             };
@@ -55,17 +55,16 @@ public class StockPriceRepository : IStockPriceRepository
         await _db.SaveChangesAsync();
     }
 
-    public async Task<DailyStockPrice?> GetDailyStockPriceAsync(
-        StockSymbol symbol, DateOnly date, CancellationToken cancellationToken)
+    public async Task<DailyStockPrice?> GetDailyStockPriceAsync(string symbol, DateOnly date)
     {
-        var entity = _db.DailyStockPrices
+        var entity = await _db.DailyStockPrices
             .AsNoTracking()
-            .Where(x => x.Symbol == symbol.Value && x.TradeDate == date)
-            .FirstOrDefault();
+            .Where(x => x.Symbol == symbol && x.TradeDate == date)
+            .FirstOrDefaultAsync();
 
         if (entity is null)
         {
-            return null;
+            return null!;
         }
 
         return new DailyStockPrice(
@@ -76,14 +75,14 @@ public class StockPriceRepository : IStockPriceRepository
         );
     }
 
-    public async Task<List<DailyStockPrice>> GetDailyStockPricesByMonth(StockSymbol symbol, DateOnly date)
+    public async Task<List<DailyStockPrice>> GetDailyStockPricesByMonth(string symbol, DateOnly date)
     {
         var startDate = new DateOnly(date.Year, date.Month, 1);
         var endDate = startDate.AddMonths(1);
 
         var result = await _db.DailyStockPrices
             .AsNoTracking()
-            .Where(x => x.TradeDate >= startDate && x.TradeDate < endDate && x.Symbol == symbol.Value)
+            .Where(x => x.TradeDate >= startDate && x.TradeDate < endDate && x.Symbol == symbol)
             .Select(x => new DailyStockPrice(symbol, x.TradeDate, new Money(x.ClosePrice, "TWD"), x.Name, x.Market))
             .ToListAsync();
 

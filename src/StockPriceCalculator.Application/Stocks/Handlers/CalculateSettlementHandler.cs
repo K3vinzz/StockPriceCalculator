@@ -24,14 +24,14 @@ public class CalculateSettlementHandler
         _clock = clock;
     }
 
-    public async Task<CalculateSettlementResult> HandleAsync(CalculateSettlementCommand command, CancellationToken ct)
+    public async Task<CalculateSettlementResult> HandleAsync(CalculateSettlementCommand command)
     {
-        var symbol = new StockSymbol(command.Symbol);
+        var symbol = command.Symbol;
         var shares = new ShareQuantity(command.Shares);
         var tradeDate = command.TradeDate;
         var market = command.Market;
 
-        var dailyPriceRecord = await _priceRepository.GetDailyStockPriceAsync(symbol, tradeDate, ct);
+        var dailyPriceRecord = await _priceRepository.GetDailyStockPriceAsync(symbol, tradeDate);
 
         if (dailyPriceRecord is null)
         {
@@ -39,7 +39,7 @@ public class CalculateSettlementHandler
 
             if (fetchedDatas.Count == 0)
             {
-                return new CalculateSettlementResult(symbol.Value, tradeDate, shares);
+                return new CalculateSettlementResult(symbol, tradeDate, shares);
             }
 
             await InsertDataToDb(symbol, tradeDate, fetchedDatas);
@@ -49,7 +49,7 @@ public class CalculateSettlementHandler
 
         if (dailyPriceRecord is null)
         {
-            return new CalculateSettlementResult(symbol.Value, tradeDate, shares);
+            return new CalculateSettlementResult(symbol, tradeDate, shares);
         }
 
         var closePrice = dailyPriceRecord.ClosePrice;
@@ -62,19 +62,19 @@ public class CalculateSettlementHandler
             _clock.UtcNow
         );
 
-        Console.WriteLine($"Record: {record.Symbol.Value}, {record.Date}, {record.Shares}, {record.ClosePrice}, {record.CreatedAt}");
+        Console.WriteLine($"Record: {record.Symbol}, {record.Date}, {record.Shares}, {record.ClosePrice}, {record.CreatedAt}");
 
         // await _recordRepository.AddAsync(record, ct);
 
         return new CalculateSettlementResult(
-            symbol.Value,
+            symbol,
             command.TradeDate,
-            shares.Value,
+            shares,
             closePrice.Amount,
             record.TotalAmount.Amount);
     }
 
-    private async Task InsertDataToDb(StockSymbol symbol, DateOnly tradeDate, List<DailyStockPrice> fetchedDatas)
+    private async Task InsertDataToDb(string symbol, DateOnly tradeDate, List<DailyStockPrice> fetchedDatas)
     {
         var existingDatas = await _priceRepository.GetDailyStockPricesByMonth(symbol, tradeDate);
 
@@ -87,15 +87,15 @@ public class CalculateSettlementHandler
 
     private async Task<List<DailyStockPrice>> FetchDailyByMarketAsync(
     string market,
-    StockSymbol symbol,
+    string symbol,
     DateOnly tradeDate)
     {
         var normalizedMarket = market.ToLowerInvariant();
 
         return normalizedMarket switch
         {
-            "twse" => await _marketDataProvider.GetTwseDaily(symbol.Value, tradeDate),
-            "tpex" => await _marketDataProvider.GetTpexDaily(symbol.Value, tradeDate),
+            "twse" => await _marketDataProvider.GetTwseDaily(symbol, tradeDate),
+            "tpex" => await _marketDataProvider.GetTpexDaily(symbol, tradeDate),
             _ => []
         };
     }

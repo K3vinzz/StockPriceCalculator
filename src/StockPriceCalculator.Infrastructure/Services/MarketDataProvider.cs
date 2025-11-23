@@ -200,7 +200,7 @@ public class MarketDataProvider : IMarketDataProvider
             if (parts.Length != 2) continue;
 
             result.Add(new Stock(
-                symbol: new StockSymbol(parts[0]),
+                symbol: parts[0],
                 name: parts[1],
                 market: cols[3].TextContent.Trim()
             ));
@@ -239,7 +239,7 @@ public class MarketDataProvider : IMarketDataProvider
         }
 
         domainModel = new DailyStockPrice(
-            symbol: new StockSymbol(symbol),
+            symbol: symbol,
             date: dateOnly,
             closePrice: new Money(close)
         );

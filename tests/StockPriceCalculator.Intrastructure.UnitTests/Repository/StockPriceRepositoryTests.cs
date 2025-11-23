@@ -72,7 +72,7 @@ public class StockPriceRepositoryTests
         await context.SaveChangesAsync();
 
         var repository = new StockPriceRepository(context);
-        var symbol = new StockSymbol("2330");
+        var symbol = "2330";
         var anyDayInNovember = new DateOnly(2025, 11, 20);
 
         // Act
@@ -110,8 +110,8 @@ public class StockPriceRepositoryTests
 
         var repository = new StockPriceRepository(context);
 
-        var symbol = new StockSymbol("2330");
-        var anotherSymbol = new StockSymbol("2317");
+        var symbol = "2330";
+        var anotherSymbol = "2317";
 
         // 你這邊依照你實際的 DailyStockPrice 建構子去 new
         // 我示意用一個 (symbol, date, money, name, market) 的版本

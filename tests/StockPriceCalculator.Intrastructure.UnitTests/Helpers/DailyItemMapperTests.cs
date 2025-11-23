@@ -27,7 +27,7 @@ public class DailyItemMapperTests
         Assert.NotNull(result);
 
         // Symbol
-        Assert.Equal("2330", result!.Symbol.Value);
+        Assert.Equal("2330", result!.Symbol);
 
         var expectedDate = new DateOnly(2025, 1, 2);
         Assert.Equal(expectedDate, result.Date);

@@ -16,17 +16,20 @@ namespace StockPriceCalculator.Api.Controllers
         private readonly IMarketDataProvider _marketDataProvider;
         private readonly StockListImportService _stockListImportService;
         private readonly CalculateSettlementHandler _calculateSettlementHandler;
+        private readonly IStockInfoRepository _stockInfoRepo;
         private readonly ILogger<StockController> _logger;
 
         public StockController(
             IMarketDataProvider marketDataProvider,
             StockListImportService stockListImportService,
             CalculateSettlementHandler calculateSettlementHandler,
+            IStockInfoRepository stockInfoRepository,
             ILogger<StockController> logger)
         {
             _marketDataProvider = marketDataProvider;
             _stockListImportService = stockListImportService;
             _calculateSettlementHandler = calculateSettlementHandler;
+            _stockInfoRepo = stockInfoRepository;
             _logger = logger;
         }
 
@@ -74,8 +77,7 @@ namespace StockPriceCalculator.Api.Controllers
         /// </summary>
         [HttpPost("CalculateSettlement")]
         public async Task<ActionResult<CalculateSettlementResponse>> CalculateSettlementAsync(
-            [FromBody] CalculateSettlementRequest request,
-            CancellationToken cancellationToken)
+            [FromBody] CalculateSettlementRequest request)
         {
             // string → DateOnly 轉換
             if (!DateOnly.TryParse(request.Date, out var tradeDate))
@@ -84,7 +86,7 @@ namespace StockPriceCalculator.Api.Controllers
             }
 
             var command = new CalculateSettlementCommand(request.Symbol, tradeDate, request.Quantity, request.Market);
-            var result = await _calculateSettlementHandler.HandleAsync(command, cancellationToken);
+            var result = await _calculateSettlementHandler.HandleAsync(command);
 
             return new CalculateSettlementResponse(
                 Symbol: result.Symbol,
@@ -94,6 +96,19 @@ namespace StockPriceCalculator.Api.Controllers
                 TotalAmount: result.TotalAmount,
                 HasPriceData: result.ClosePrice > 0 && result.TotalAmount > 0
             );
+        }
+
+        [HttpGet("search")]
+        public async Task<ActionResult<StockSearchResponse>> SearchStocks([FromQuery] string keyword)
+        {
+            if (string.IsNullOrWhiteSpace(keyword))
+                return Ok(new StockSearchResponse([]));
+
+            var stocks = await _stockInfoRepo.SearchStocksAsync(keyword);
+
+            var response = new StockSearchResponse(stocks);
+
+            return Ok(response);
         }
     }
 }
