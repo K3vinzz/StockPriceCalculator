@@ -1,8 +1,10 @@
-using System;
-
 namespace StockPriceCalculator.Api.Contracts.Stocks;
 
-public class CalculateSettlementResponse
-{
-
-}
+public sealed record CalculateSettlementResponse(
+    string Symbol,
+    string TradeDate,
+    int Shares,
+    decimal ClosePrice,
+    decimal TotalAmount,
+    bool HasPriceData
+);

@@ -86,7 +86,14 @@ namespace StockPriceCalculator.Api.Controllers
             var command = new CalculateSettlementCommand(request.Symbol, tradeDate, request.Quantity, request.Market);
             var result = await _calculateSettlementHandler.HandleAsync(command, cancellationToken);
 
-            return Ok(result);
+            return new CalculateSettlementResponse(
+                Symbol: result.Symbol,
+                TradeDate: result.TradeDate.ToString("yyyy-MM-dd"),
+                Shares: result.Shares,
+                ClosePrice: result.ClosePrice,
+                TotalAmount: result.TotalAmount,
+                HasPriceData: result.ClosePrice > 0 && result.TotalAmount > 0
+            );
         }
     }
 }
