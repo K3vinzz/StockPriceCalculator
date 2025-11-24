@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { reactive } from 'vue';
-import { calculateSettlement, Stock } from './api/stockApi';
+import { calculateSettlement, type Stock } from './api/stockApi';
 import AutocompleteStock from './api/components/AutocompleteStock.vue';
 
 type Row = {
@@ -12,11 +12,8 @@ type Row = {
   result: any | null;
   isLoading: boolean;
   error: string;
+  lastRequestKey: string | null;
 };
-
-const rows = reactive<Row[]>([
-  createEmptyRow(),
-]);
 
 function createEmptyRow(): Row {
   return {
@@ -28,8 +25,11 @@ function createEmptyRow(): Row {
     result: null,
     isLoading: false,
     error: '',
+    lastRequestKey: null,
   };
 }
+
+const rows = reactive<Row[]>([createEmptyRow()]);
 
 function addRow() {
   rows.push(createEmptyRow());
@@ -39,22 +39,36 @@ function removeRow(index: number) {
   rows.splice(index, 1);
 }
 
-function onStockSelected(row: Row, stock: Stock) {
-  row.symbol = stock.symbol;
-  row.market = stock.market; // 自動帶入市場
-  row.error = '';
+function buildRequestKey(row: Row): string {
+  return `${row.symbol}|${row.market}|${row.date}|${row.quantity}`;
 }
 
-async function onCalculate(row: Row) {
+function onStockSelected(row: Row, stock: Stock) {
+  row.symbol = stock.symbol;
+  row.market = stock.market;
+  row.error = '';
+  autoCalculate(row);
+}
+
+async function autoCalculate(row: Row) {
   row.error = '';
   row.result = null;
 
+  // 必要欄位檢查（未填完就不要打 API）
   if (!row.symbol || !row.date || !row.quantity || row.quantity <= 0) {
-    row.error = '請輸入完整資料';
     return;
   }
 
+  const key = buildRequestKey(row);
+
+  // 相同條件已算過就不再打 API
+  if (row.lastRequestKey === key) {
+    return;
+  }
+
+  row.lastRequestKey = key;
   row.isLoading = true;
+
   try {
     const res = await calculateSettlement({
       symbol: row.symbol,
@@ -66,6 +80,7 @@ async function onCalculate(row: Row) {
   } catch (e: any) {
     console.error(e);
     row.error = e?.response?.data ?? 'API 呼叫失敗';
+    row.result = null;
   } finally {
     row.isLoading = false;
   }
@@ -77,101 +92,104 @@ async function onCalculate(row: Row) {
     <header class="page-header">
       <h1>股票交割金額試算</h1>
       <p class="page-subtitle">
-        輸入股票、日期與股數，系統會即時計算交割金額。
+        選擇股票、日期與股數後，系統會自動取得收盤價並計算交割金額。
       </p>
     </header>
 
     <main class="content">
-      <div v-for="(row, index) in rows" :key="row.id" class="trade-card">
-        <div class="trade-card-header">
-          <div class="trade-card-title">第 {{ index + 1 }} 筆交易</div>
-          <button v-if="rows.length > 1" type="button" class="btn btn-ghost" @click="removeRow(index)">
-            刪除
-          </button>
-        </div>
+      <div class="table-wrapper">
+        <table class="trade-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th style="min-width: 220px;">股票（代號 / 名稱）</th>
+              <th class="cell-center">市場</th>
+              <th>交易日期</th>
+              <th>股數</th>
+              <th>收盤價</th>
+              <th>交割金額</th>
+              <th style="min-width: 160px;">狀態 / 刪除</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(row, index) in rows" :key="row.id">
+              <!-- 序號 -->
+              <td class="cell-center">
+                {{ index + 1 }}
+              </td>
 
-        <div class="trade-card-body">
-          <!-- 左側：輸入欄位 -->
-          <div class="trade-form">
-            <div class="form-row form-row-full">
-              <label class="form-label">股票（代號 / 名稱）</label>
-              <!-- Autocomplete：選股票後會觸發 select 事件 -->
-              <AutocompleteStock @select="stock => onStockSelected(row, stock)" />
-            </div>
-
-            <div class="form-row">
-              <label class="form-label">交易日期</label>
-              <input v-model="row.date" type="date" class="input" />
-            </div>
-
-            <div class="form-row">
-              <label class="form-label">股數</label>
-              <input v-model.number="row.quantity" type="number" min="1" step="1" class="input" placeholder="例如：1000" />
-            </div>
-
-            <div class="form-row form-row-full">
-              <small class="hint">
-                已選擇：
-                <template v-if="row.symbol">
-                  {{ row.symbol }}（市場：{{ row.market }}）
-                </template>
-                <template v-else>
-                  尚未選擇股票
-                </template>
-              </small>
-            </div>
-
-            <div class="form-actions form-row-full">
-              <button type="button" class="btn btn-primary" @click="onCalculate(row)" :disabled="row.isLoading">
-                {{ row.isLoading ? '計算中…' : '計算' }}
-              </button>
-            </div>
-          </div>
-
-          <!-- 右側：結果區 -->
-          <div class="trade-result">
-            <div v-if="row.error" class="result-box error">
-              {{ row.error }}
-            </div>
-
-            <div v-else-if="row.result" class="result-box success">
-              <template v-if="row.result.hasPriceData">
-                <div class="result-title">計算結果</div>
-
-                <div class="result-item">
-                  <span>股票代號</span>
-                  <strong>{{ row.result.symbol }}</strong>
+              <!-- 股票 autocomplete -->
+              <td>
+                <AutocompleteStock class="stock-autocomplete" @select="stock => onStockSelected(row, stock)" />
+                <div class="selected-info">
+                  <span v-if="row.symbol">
+                    已選擇：{{ row.symbol }}（{{ row.market }}）
+                  </span>
+                  <span v-else class="muted">尚未選擇股票</span>
                 </div>
-                <div class="result-item">
-                  <span>交易日期</span>
-                  <strong>{{ row.result.tradeDate }}</strong>
-                </div>
-                <div class="result-item">
-                  <span>收盤價</span>
-                  <strong>{{ row.result.closePrice }}</strong>
-                </div>
-                <div class="result-item">
-                  <span>股數</span>
-                  <strong>{{ row.result.shares }}</strong>
-                </div>
-                <div class="result-item total">
-                  <span>總交割金額</span>
-                  <strong>{{ row.result.totalAmount }}</strong>
-                </div>
-              </template>
-              <template v-else>
-                <div class="result-title">無法取得收盤價</div>
-                <p class="result-text">
-                  該日期沒有收盤價資料，無法計算交割金額。
-                </p>
-              </template>
-            </div>
+              </td>
 
-            <div v-else class="result-box placeholder">
-              請輸入資料並按下「計算」，結果會顯示在這裡。
-            </div>
-          </div>
-        </div>
+              <!-- 市場（只展示） -->
+              <td class="cell-center">
+                <span class="badge">
+                  {{ row.market || '—' }}
+                </span>
+              </td>
+
+              <!-- 日期 -->
+              <td>
+                <input v-model="row.date" type="date" class="input" @change="autoCalculate(row)" />
+              </td>
+
+              <!-- 股數 -->
+              <td>
+                <input v-model.number="row.quantity" type="number" min="1" step="1" class="input" placeholder="例如：1000"
+                  @change="autoCalculate(row)" />
+              </td>
+
+              <!-- 收盤價 -->
+              <td class="cell-right">
+                <span v-if="row.result && row.result.hasPriceData">
+                  {{ row.result.closePrice }}
+                </span>
+                <span v-else class="muted">—</span>
+              </td>
+
+              <!-- 交割金額 -->
+              <td class="cell-right">
+                <span v-if="row.result && row.result.hasPriceData">
+                  {{ row.result.totalAmount }}
+                </span>
+                <span v-else-if="row.result && !row.result.hasPriceData" class="muted">
+                  無收盤價
+                </span>
+                <span v-else class="muted">—</span>
+              </td>
+
+              <!-- 狀態 + 刪除 -->
+              <td>
+                <div class="actions-cell">
+                  <div class="status-text">
+                    <span v-if="row.isLoading" class="muted">計算中…</span>
+                    <span v-else-if="row.error" class="error-text">
+                      {{ row.error }}
+                    </span>
+                    <span v-else-if="row.result && row.result.hasPriceData" class="ok-text">
+                      已計算
+                    </span>
+                    <span v-else class="muted">
+                      請輸入完整資料
+                    </span>
+                  </div>
+
+                  <button v-if="rows.length > 1" type="button" class="btn btn-ghost" @click="removeRow(index)">
+                    刪除
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       <div class="add-row">
@@ -192,7 +210,7 @@ async function onCalculate(row: Row) {
 }
 
 .page-header {
-  max-width: 960px;
+  max-width: 1100px;
   margin: 0 auto 1.5rem;
 }
 
@@ -207,159 +225,96 @@ async function onCalculate(row: Row) {
 }
 
 .content {
-  max-width: 960px;
+  max-width: 1100px;
   margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
 }
 
-.trade-card {
-  background: #fff;
+.table-wrapper {
+  background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
-  padding: 1rem 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  padding: 1rem;
+  /* overflow-x: auto;  // 已移除，避免裁掉下拉選單 */
 }
 
-.trade-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.trade-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
 }
 
-.trade-card-title {
+.trade-table thead {
+  background: #f3f4f6;
+}
+
+.trade-table th,
+.trade-table td {
+  padding: 0.55rem 0.6rem;
+  border-bottom: 1px solid #e5e7eb;
+  vertical-align: top;
+}
+
+.trade-table th {
+  text-align: left;
   font-weight: 600;
-  font-size: 0.95rem;
-  color: #111827;
-}
-
-.trade-card-body {
-  display: grid;
-  grid-template-columns: 2fr 1.5fr;
-  gap: 1.5rem;
-}
-
-.trade-form {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: 1rem;
-  row-gap: 0.75rem;
-}
-
-.form-row {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.form-row-full {
-  grid-column: 1 / -1;
-}
-
-.form-label {
   font-size: 0.8rem;
   color: #6b7280;
 }
 
+th.cell-center,
+td.cell-center {
+  text-align: center;
+}
+
+.cell-right {
+  text-align: right;
+}
+
+/* Autocomplete 下面的小提示 */
+.selected-info {
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+}
+
+.muted {
+  color: #9ca3af;
+}
+
+/* 市場 badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: #e5f0ff;
+  color: #1d4ed8;
+}
+
+/* Inputs */
 .input {
+  width: 100%;
   border-radius: 8px;
   border: 1px solid #d1d5db;
-  padding: 0.4rem 0.55rem;
-  font-size: 0.9rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.85rem;
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
   background-color: #f9fafb;
+  transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
 }
 
 .input:focus {
   border-color: #2563eb;
-  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.4);
-  background-color: #fff;
-}
-
-.hint {
-  font-size: 0.8rem;
-  color: #6b7280;
-}
-
-.form-actions {
-  margin-top: 0.25rem;
-}
-
-.trade-result {
-  display: flex;
-  align-items: stretch;
-}
-
-.result-box {
-  border-radius: 10px;
-  padding: 0.75rem 0.9rem;
-  font-size: 0.9rem;
-  width: 100%;
-}
-
-.result-box.placeholder {
-  border: 1px dashed #d1d5db;
-  color: #6b7280;
-  background: #f9fafb;
-}
-
-.result-box.error {
-  border: 1px solid #fecaca;
-  background: #fef2f2;
-  color: #b91c1c;
-}
-
-.result-box.success {
-  border: 1px solid #bfdbfe;
-  background: #eff6ff;
-  color: #1f2937;
-}
-
-.result-title {
-  font-weight: 600;
-  margin-bottom: 0.4rem;
-}
-
-.result-item {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.15rem;
-}
-
-.result-item span {
-  color: #4b5563;
-  font-size: 0.85rem;
-}
-
-.result-item strong {
-  font-weight: 600;
-}
-
-.result-item.total {
-  margin-top: 0.4rem;
-  padding-top: 0.4rem;
-  border-top: 1px dashed #93c5fd;
-}
-
-.result-item.total strong {
-  font-size: 1rem;
-}
-
-.result-text {
-  font-size: 0.85rem;
-  color: #4b5563;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.3);
+  background-color: #ffffff;
 }
 
 /* Buttons */
 .btn {
   border-radius: 9999px;
   border: none;
-  padding: 0.35rem 0.9rem;
-  font-size: 0.85rem;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.8rem;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -367,23 +322,8 @@ async function onCalculate(row: Row) {
   transition: background-color 0.15s, color 0.15s, box-shadow 0.15s, border-color 0.15s;
 }
 
-.btn-primary {
-  background: #2563eb;
-  color: #fff;
-  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.4);
-}
-
-.btn-primary:disabled {
-  opacity: 0.7;
-  cursor: default;
-  box-shadow: none;
-}
-
-.btn-primary:not(:disabled):hover {
-  background: #1d4ed8;
-}
-
 .btn-outline {
+  border-radius: 9999px;
   border: 1px solid #d1d5db;
   background: #fff;
   color: #374151;
@@ -398,6 +338,7 @@ async function onCalculate(row: Row) {
   border: none;
   background: transparent;
   color: #6b7280;
+  padding-inline: 0.3rem;
 }
 
 .btn-ghost:hover {
@@ -405,20 +346,42 @@ async function onCalculate(row: Row) {
   color: #111827;
 }
 
-.add-row {
+.actions-cell {
   display: flex;
-  justify-content: center;
-  margin-top: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem;
 }
 
-/* RWD */
+.status-text {
+  font-size: 0.8rem;
+}
+
+.error-text {
+  font-size: 0.8rem;
+  color: #b91c1c;
+}
+
+.ok-text {
+  font-size: 0.8rem;
+  color: #16a34a;
+}
+
+/* 下方新增按鈕 */
+.add-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.75rem;
+}
+
+/* RWD: 窄螢幕時讓 table 可橫向捲動就好 */
 @media (max-width: 768px) {
-  .trade-card-body {
-    grid-template-columns: 1fr;
+  .page {
+    padding: 1rem 0.5rem;
   }
 
-  .trade-form {
-    grid-template-columns: 1fr;
+  .table-wrapper {
+    padding: 0.5rem;
   }
 }
 </style>
