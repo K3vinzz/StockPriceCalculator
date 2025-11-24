@@ -19,12 +19,6 @@ public class MarketDataProvider : IMarketDataProvider
     private const string TwseDailyInternalEndpoint = "exchangeReport/STOCK_DAY";
     private const string TpexMainDailyInternalEndpoint = "www/zh-tw/afterTrading/tradingStock"; // 上櫃
     private const string TpexEmergingDailyInternalEndpoint = "www/zh-tw/emerging/historical"; // 興櫃
-    private const string IsinTwseEndpoint = "isin/C_public.jsp?strMode=2"; // 上市
-    private const string IsinTpexEndpoint1 = "isin/C_public.jsp?strMode=4"; // 上櫃
-    private const string IsinTpexEndpoint2 = "isin/C_public.jsp?strMode=5"; // 興櫃
-
-
-
 
     private readonly IHttpClientFactory _clientFactory;
     private readonly ILogger<IMarketDataProvider> _logger;

@@ -5,6 +5,9 @@ namespace StockPriceCalculator.Infrastructure.Services;
 
 public class StockListImportService
 {
+    private const string IsinTwseEndpoint = "isin/C_public.jsp?strMode=2"; // 上市
+    private const string IsinTpexEndpoint = "isin/C_public.jsp?strMode=4"; // 上櫃
+
     private readonly IStockPriceRepository _stockPriceRepository;
     private readonly IMarketDataProvider _marketDataProvider;
     private readonly ILogger<StockListImportService> _logger;
@@ -18,7 +21,7 @@ public class StockListImportService
 
     public async Task ImportStockListAsync()
     {
-        var endpoints = new string[] { "IsinTwseEndpoint", "IsinTpexEndpoint1", "IsinTpexEndpoint2" };
+        var endpoints = new string[] { IsinTwseEndpoint, IsinTpexEndpoint };
 
         foreach (var endpoint in endpoints)
         {
@@ -30,7 +33,14 @@ public class StockListImportService
                 return;
             }
 
-            await _stockPriceRepository.AddStocksAsync(list);
+            var market = endpoint switch
+            {
+                IsinTwseEndpoint => "TWSE",
+                IsinTpexEndpoint => "TPEX",
+                _ => "unknown"
+            };
+
+            await _stockPriceRepository.AddStocksAsync(list, market);
         }
     }
 }

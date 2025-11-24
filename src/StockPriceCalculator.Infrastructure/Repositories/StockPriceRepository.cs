@@ -31,24 +31,13 @@ public class StockPriceRepository : IStockPriceRepository
         await _db.SaveChangesAsync();
     }
 
-    public async Task AddStocksAsync(IEnumerable<Stock> stocks)
+    public async Task AddStocksAsync(IEnumerable<Stock> stocks, string market)
     {
-        var entities = stocks.Select(s =>
+        var entities = stocks.Select(s => new StockEntity
         {
-            var marketCode = s.Market switch
-            {
-                "上市" => "TWSE",
-                "上櫃" => "TPEX",
-                "興櫃" => "Emerging",
-                _ => "unknown"
-            };
-
-            return new StockEntity
-            {
-                Symbol = s.Symbol,
-                Name = s.Name,
-                Market = marketCode
-            };
+            Symbol = s.Symbol,
+            Name = s.Name,
+            Market = market
         });
 
         await _db.Stocks.AddRangeAsync(entities);
