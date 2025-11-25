@@ -3,7 +3,7 @@ name: Build and Deploy to Cloud Run
 on:
   push:
     branches:
-      - main  # 只有 push 到 main 才會觸發
+      - main
 
 jobs:
   build-and-deploy:
@@ -30,6 +30,13 @@ jobs:
       - name: Configure Docker to use gcloud as a credential helper
         run: |
           gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Login to Artifact Registry   # 🔥 新增這一段
+        run: |
+          HOST="${{ env.REGION }}-docker.pkg.dev"
+          echo "Login to $HOST"
+          gcloud auth print-access-token \
+            | docker login -u oauth2accesstoken --password-stdin "https://$HOST"
 
       - name: Build Docker image
         run: |
