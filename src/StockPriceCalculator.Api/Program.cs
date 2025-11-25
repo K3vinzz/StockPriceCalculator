@@ -6,6 +6,20 @@ Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
 var builder = WebApplication.CreateBuilder(args);
 
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowPages", policy =>
+    {
+        policy.WithOrigins(
+                "https://stockpricecalculator.kevincheng401.workers.dev"    // Cloudflare Pages 自動給的 domain
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
+
 // Add services to the container.
 builder.Services.AddInfrastructure(builder.Configuration);
 
@@ -25,6 +39,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors("AllowPages");
 
 app.UseAuthorization();
 
