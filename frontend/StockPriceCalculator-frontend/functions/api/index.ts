@@ -90,9 +90,8 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
     // 前端打的是 /api/stock/CalculateSettlement
     // Cloud Run 也是 /api/stock/CalculateSettlement
-    // 所以這裡把前面的 `/api` 拿掉後接到 CLOUD_RUN_BASE_URL
     const targetUrl = new URL(cloudRunBase);
-    targetUrl.pathname = url.pathname.replace(/^\/api/, "");
+    targetUrl.pathname = url.pathname;
     targetUrl.search = url.search;
 
     const headers = new Headers(request.headers);
