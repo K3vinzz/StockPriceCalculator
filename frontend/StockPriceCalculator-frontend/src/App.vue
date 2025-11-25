@@ -7,6 +7,7 @@ type Row = {
   id: number;
   symbol: string;
   market: string;
+  rawDate: string;
   date: string;
   quantity: number | null;
   result: any | null;
@@ -20,6 +21,7 @@ function createEmptyRow(): Row {
     id: Date.now() + Math.random(),
     symbol: '',
     market: 'TWSE',
+    rawDate: '',
     date: '',
     quantity: null,
     result: null,
@@ -27,6 +29,55 @@ function createEmptyRow(): Row {
     error: '',
     lastRequestKey: null,
   };
+}
+
+function parseDateInput(input: string): string | null {
+  const digits = input.replace(/\D/g, '');
+  if (digits.length === 8) {
+    // 視為西元：yyyyMMdd
+    const year = Number(digits.slice(0, 4));
+    const month = Number(digits.slice(4, 6));
+    const day = Number(digits.slice(6, 8));
+    if (!isValidYmd(year, month, day)) return null;
+    return `${year.toString().padStart(4, '0')}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
+  }
+
+  if (digits.length === 7) {
+    // 視為民國：yyyMMdd，例如 1140102
+    const rocYear = Number(digits.slice(0, 3));
+    const year = rocYear + 1911;
+    const month = Number(digits.slice(3, 5));
+    const day = Number(digits.slice(5, 7));
+    if (!isValidYmd(year, month, day)) return null;
+    return `${year.toString().padStart(4, '0')}-${digits.slice(3, 5)}-${digits.slice(5, 7)}`;
+  }
+
+  return null;
+}
+
+function isValidYmd(year: number, month: number, day: number): boolean {
+  if (month < 1 || month > 12) return false;
+  if (day < 1 || day > 31) return false;
+  const dt = new Date(year, month - 1, day);
+  return (
+    dt.getFullYear() === year &&
+    dt.getMonth() === month - 1 &&
+    dt.getDate() === day
+  );
+}
+
+function onDateChanged(row: Row) {
+  row.error = '';
+  const normalized = parseDateInput(row.rawDate);
+  if (!normalized) {
+    row.date = '';
+    row.result = null;
+    row.error = '日期格式錯誤，請輸入 20250101 或 1140102';
+    return;
+  }
+
+  row.date = normalized; // 給 API 用
+  autoCalculate(row);
 }
 
 const rows = reactive<Row[]>([createEmptyRow()]);
@@ -138,7 +189,8 @@ async function autoCalculate(row: Row) {
 
               <!-- 日期 -->
               <td>
-                <input v-model="row.date" type="date" class="input" @change="autoCalculate(row)" />
+                <input v-model="row.rawDate" type="text" class="input" @change="onDateChanged(row)" inputmode="numeric"
+                  maxlength="8" />
               </td>
 
               <!-- 股數 -->
