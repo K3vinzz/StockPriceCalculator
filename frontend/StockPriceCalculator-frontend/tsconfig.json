@@ -7,7 +7,8 @@
     "moduleResolution": "bundler",
     // 讓 import "vue"、import.meta.env 等型別正常
     "types": [
-      "vite/client"
+      "vite/client",
+      "@cloudflare/workers-types"
     ],
     // 嚴格型別檢查
     "strict": true,
@@ -28,7 +29,8 @@
     "src/**/*.ts",
     "src/**/*.d.ts",
     "src/**/*.tsx",
-    "src/**/*.vue"
+    "src/**/*.vue",
+    "functions/**/*.ts"
   ],
   "exclude": [
     "node_modules",
