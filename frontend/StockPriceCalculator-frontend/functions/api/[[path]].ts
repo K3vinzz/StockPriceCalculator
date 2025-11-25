@@ -3,12 +3,11 @@ interface Env {
     CLOUD_RUN_BASE_URL: string;
 }
 
-
 export const onRequest: PagesFunction<Env> = async (context) => {
     const { request, env } = context;
 
     const saKeyJson = env.GCP_SA_KEY as string;
-    const cloudRunBase = env.CLOUD_RUN_BASE_URL as string;
+    const cloudRunBase = env.CLOUD_RUN_BASE_URL as string; // e.g. https://stock-api-1005247735680.asia-east1.run.app
 
     if (!saKeyJson || !cloudRunBase) {
         return new Response("Missing GCP_SA_KEY or CLOUD_RUN_BASE_URL", { status: 500 });
@@ -16,15 +15,17 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
     const sa = JSON.parse(saKeyJson);
 
-    // ----- 1. 準備 JWT -----
+    // ----- 1. 準備 JWT (for ID token) -----
     const header = { alg: "RS256", typ: "JWT" };
     const now = Math.floor(Date.now() / 1000);
+
     const claim = {
         iss: sa.client_email,
-        scope: "https://www.googleapis.com/auth/cloud-platform",
+        sub: sa.client_email,
         aud: "https://oauth2.googleapis.com/token",
         iat: now,
         exp: now + 3600,
+        target_audience: cloudRunBase,   // <-- 這裡就是你的 Cloud Run URL
     };
 
     const base64UrlEncode = (obj: unknown) =>
@@ -66,7 +67,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
     const signedJwt = `${unsignedJwt}.${signatureBase64Url}`;
 
-    // ----- 2. 用 JWT 換 Access Token -----
+    // ----- 2. 用 JWT 換「ID Token」而不是 Access Token -----
     const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -82,13 +83,16 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     }
 
     const tokenJson = await tokenRes.json<any>();
-    const accessToken = tokenJson.access_token as string;
+
+    const idToken = tokenJson.id_token as string;
+
+    if (!idToken) {
+        return new Response("No id_token in token response", { status: 500 });
+    }
 
     // ----- 3. Proxy request 到 Cloud Run -----
     const url = new URL(request.url);
 
-    // 前端打的是 /api/stock/CalculateSettlement
-    // Cloud Run 也是 /api/stock/CalculateSettlement
     const targetUrl = new URL(cloudRunBase);
     targetUrl.pathname = url.pathname;
     targetUrl.search = url.search;
@@ -96,7 +100,8 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     const headers = new Headers(request.headers);
     ["host", "cf-connecting-ip", "x-forwarded-for", "x-forwarded-host"].forEach(h => headers.delete(h));
 
-    headers.set("Authorization", `Bearer ${accessToken}`);
+    // 用 ID Token 當 Bearer token
+    headers.set("Authorization", `Bearer ${idToken}`);
 
     const init: RequestInit = {
         method: request.method,
