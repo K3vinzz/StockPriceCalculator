@@ -20,24 +20,32 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 1️⃣ 先用 auth action 登入 GCP（用你的 Service Account JSON）
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      # 2️⃣ 再安裝 gcloud，順便設定 project
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.PROJECT_ID }}
-          service_account_key: ${{ secrets.GCP_SA_KEY }}
-          export_default_credentials: true
+          # version: '>= 480.0.0'  # 可選，不寫就用預設
 
+      # 3️⃣ 設定 Docker 使用 gcloud / 登入 Artifact Registry
       - name: Configure Docker to use gcloud as a credential helper
         run: |
           gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
-      - name: Login to Artifact Registry   # 🔥 新增這一段
+      - name: Login to Artifact Registry
         run: |
           HOST="${{ env.REGION }}-docker.pkg.dev"
           echo "Login to $HOST"
           gcloud auth print-access-token \
             | docker login -u oauth2accesstoken --password-stdin "https://$HOST"
 
+      # 4️⃣ Build image
       - name: Build Docker image
         run: |
           IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}"
@@ -49,6 +57,7 @@ jobs:
           echo "Tagging as latest"
           docker tag "$IMAGE_URI:$TAG" "$IMAGE_URI:latest"
 
+      # 5️⃣ Push image
       - name: Push Docker image
         run: |
           IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}"
@@ -57,6 +66,7 @@ jobs:
           docker push "$IMAGE_URI:$TAG"
           docker push "$IMAGE_URI:latest"
 
+      # 6️⃣ Deploy to Cloud Run
       - name: Deploy to Cloud Run
         run: |
           IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}"
