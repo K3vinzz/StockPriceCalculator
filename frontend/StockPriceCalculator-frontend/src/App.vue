@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { reactive } from 'vue';
+import { reactive, computed } from 'vue';
 import { calculateSettlement, type Stock } from './api/stockApi';
 import AutocompleteStock from './api/components/AutocompleteStock.vue';
+import StockInput from './api/components/StockInput.vue';
 
 type Row = {
   id: number;
@@ -29,6 +30,46 @@ function createEmptyRow(): Row {
     error: '',
     lastRequestKey: null,
   };
+}
+
+function addRowAfterSuccess(row: Row) {
+  const last = rows[rows.length - 1];
+  if (!last) {
+    return;
+  }
+  const isLastRow = last.id === row.id;
+  if (!isLastRow) return;
+
+  // 檢查最後一列是不是空白列
+  const isLastRowEmpty =
+    !last.symbol &&
+    !last.rawDate &&
+    (last.quantity == null || last.quantity <= 0) &&
+    !last.result;
+
+  if (isLastRowEmpty) return;
+
+  // 新增一列空白 row
+  rows.push(createEmptyRow());
+}
+
+function addRowAfterDelete() {
+  const last = rows[rows.length - 1];
+  if (!last) {
+    return;
+  }
+
+  // 檢查最後一列是不是空白列
+  const isLastRowEmpty =
+    !last.symbol &&
+    !last.rawDate &&
+    (last.quantity == null || last.quantity <= 0) &&
+    !last.result;
+
+  if (isLastRowEmpty) return;
+
+  // 新增一列空白 row
+  rows.push(createEmptyRow());
 }
 
 function parseDateInput(input: string): string | null {
@@ -88,13 +129,20 @@ function addRow() {
 
 function removeRow(index: number) {
   rows.splice(index, 1);
+  addRowAfterDelete();
 }
 
 function buildRequestKey(row: Row): string {
   return `${row.symbol}|${row.market}|${row.date}|${row.quantity}`;
 }
 
-function onStockSelected(row: Row, stock: Stock) {
+function onStockSelected(row: Row, stock: Stock | null) {
+  if (!stock) {
+    row.symbol = ''
+    row.market = ''
+    row.error = '查無代碼'
+    return
+  }
   row.symbol = stock.symbol;
   row.market = stock.market;
   row.error = '';
@@ -128,6 +176,10 @@ async function autoCalculate(row: Row) {
       market: row.market,
     });
     row.result = res.data;
+
+    if (res.data?.hasPriceData) {
+      addRowAfterSuccess(row);
+    }
   } catch (e: any) {
     console.error(e);
     row.error = e?.response?.data ?? 'API 呼叫失敗';
@@ -136,6 +188,25 @@ async function autoCalculate(row: Row) {
     row.isLoading = false;
   }
 }
+
+// 總交割金額（只計算有 hasPriceData 的列）
+const totalSettlement = computed(() => {
+  return rows.reduce((sum, row) => {
+    if (!row.result || !row.result.hasPriceData) return sum;
+
+    const raw = row.result.totalAmount;
+
+    // 兼容 number / string / 含逗號字串
+    const value =
+      typeof raw === 'number'
+        ? raw
+        : Number(String(raw).replace(/,/g, ''));
+
+    if (Number.isNaN(value)) return sum;
+
+    return sum + value;
+  }, 0);
+});
 </script>
 
 <template>
@@ -154,7 +225,6 @@ async function autoCalculate(row: Row) {
             <tr>
               <th>#</th>
               <th style="min-width: 220px;">股票（代號 / 名稱）</th>
-              <th class="cell-center">市場</th>
               <th>交易日期</th>
               <th>股數</th>
               <th>收盤價</th>
@@ -171,20 +241,13 @@ async function autoCalculate(row: Row) {
 
               <!-- 股票 autocomplete -->
               <td>
-                <AutocompleteStock class="stock-autocomplete" @select="stock => onStockSelected(row, stock)" />
+                <StockInput @select="stock => onStockSelected(row, stock)"></StockInput>
                 <div class="selected-info">
                   <span v-if="row.symbol">
-                    已選擇：{{ row.symbol }}（{{ row.market }}）
+                    {{ row.symbol }}（{{ row.market }}）
                   </span>
                   <span v-else class="muted">尚未選擇股票</span>
                 </div>
-              </td>
-
-              <!-- 市場（只展示） -->
-              <td class="cell-center">
-                <span class="badge">
-                  {{ row.market || '—' }}
-                </span>
               </td>
 
               <!-- 日期 -->
@@ -241,6 +304,24 @@ async function autoCalculate(row: Row) {
               </td>
             </tr>
           </tbody>
+          <!-- 🔽 新增：表格 footer，顯示總交割金額 -->
+          <tfoot>
+            <tr>
+              <!-- 前面幾欄合併，文字靠右 -->
+              <td colspan="6" class="cell-right footer-label">
+                總交割金額
+              </td>
+              <!-- 顯示數字 -->
+              <td class="cell-right footer-value">
+                <span v-if="totalSettlement > 0">
+                  {{ totalSettlement.toLocaleString() }}
+                </span>
+                <span v-else class="muted">—</span>
+              </td>
+              <!-- 最後一欄空白（對齊狀態 / 刪除欄） -->
+              <td></td>
+            </tr>
+          </tfoot>
         </table>
       </div>
 
@@ -285,8 +366,13 @@ async function autoCalculate(row: Row) {
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
-  padding: 1rem;
-  /* overflow-x: auto;  // 已移除，避免裁掉下拉選單 */
+}
+
+.trade-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f3f4f6;
 }
 
 .trade-table {
@@ -320,6 +406,24 @@ td.cell-center {
 
 .cell-right {
   text-align: right;
+}
+
+/* 🔽 footer sticky：捲動時固定在下方（如果你不想黏住，可以刪掉 position / bottom） */
+.trade-table tfoot td {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+  font-weight: 600;
+}
+
+.footer-label {
+  color: #4b5563;
+}
+
+.footer-value {
+  color: #111827;
 }
 
 /* Autocomplete 下面的小提示 */

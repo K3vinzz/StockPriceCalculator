@@ -32,6 +32,13 @@ export interface Stock {
     market: string;
 }
 
+export interface StockMatchResponse {
+    stock: Stock | null
+}
+
+export function matchStock(keyword: string) {
+    return apiClient.get<StockMatchResponse>(`/api/stock/match?keyword=${keyword}`);
+}
 
 export function searchStocks(keyword: string) {
     return apiClient.get<StockSearchResponse>(`/api/stock/search?keyword=${keyword}`);

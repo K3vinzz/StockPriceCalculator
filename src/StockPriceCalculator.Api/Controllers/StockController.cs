@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using StockPriceCalculator.Api.Contracts.Stocks;
 using StockPriceCalculator.Application.Stocks.Commands;
 using StockPriceCalculator.Application.Stocks.Handlers;
@@ -107,6 +108,19 @@ namespace StockPriceCalculator.Api.Controllers
             var stocks = await _stockInfoRepo.SearchStocksAsync(keyword);
 
             var response = new StockSearchResponse(stocks);
+
+            return Ok(response);
+        }
+
+        [HttpGet("match")]
+        public async Task<ActionResult<StockMatchResponse>> MatchStock([FromQuery] string keyword)
+        {
+            if (string.IsNullOrWhiteSpace(keyword))
+                return Ok(new StockMatchResponse(null));
+
+            var stock = await _stockInfoRepo.MatchStockAsync(keyword);
+
+            var response = new StockMatchResponse(stock);
 
             return Ok(response);
         }

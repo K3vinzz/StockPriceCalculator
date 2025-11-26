@@ -13,6 +13,20 @@ public class StockInfoRepository : IStockInfoRepository
     {
         _db = stockDbContext;
     }
+
+    public async Task<Stock?> MatchStockAsync(string keyword)
+    {
+        var entity = await _db.Stocks
+            .FirstOrDefaultAsync(x => x.Symbol == keyword);
+
+        if (entity is null)
+        {
+            return null;
+        }
+
+        return new Stock(symbol: entity.Symbol, name: entity.Name, market: entity.Market);
+    }
+
     public async Task<List<Stock>> SearchStocksAsync(string keyword)
     {
         return await _db.Stocks

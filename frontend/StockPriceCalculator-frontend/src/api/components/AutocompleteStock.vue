@@ -34,7 +34,7 @@ function selectStock(item: Stock) {
     <div class="autocomplete">
         <input v-model="keyword" type="text" placeholder="輸入股票代號或名稱" class="input" />
 
-        <ul v-if="isOpen" class="dropdown">
+        <ul v-if="isOpen && results.length" class="dropdown">
             <li v-for="item in results" :key="item.symbol" @click="selectStock(item)">
                 {{ item.symbol }} - {{ item.name }} ({{ item.market }})
             </li>
