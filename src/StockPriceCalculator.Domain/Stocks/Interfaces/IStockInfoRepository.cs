@@ -5,4 +5,6 @@ public interface IStockInfoRepository
     Task<List<Stock>> SearchStocksAsync(string keyword);
 
     Task<Stock?> MatchStockAsync(string keyword);
+    Task AddStocksAsync(IEnumerable<Stock> stocks, string market);
+    Task TruncateStockListAsync();
 }

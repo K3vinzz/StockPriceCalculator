@@ -7,20 +7,33 @@ public class StockListImportService
 {
     private const string IsinTwseEndpoint = "isin/C_public.jsp?strMode=2"; // 上市
     private const string IsinTpexEndpoint = "isin/C_public.jsp?strMode=4"; // 上櫃
-
-    private readonly IStockPriceRepository _stockPriceRepository;
+    private readonly IStockInfoRepository _stockInfoRepository;
     private readonly IMarketDataProvider _marketDataProvider;
     private readonly ILogger<StockListImportService> _logger;
 
-    public StockListImportService(IStockPriceRepository stockPriceRepository, IMarketDataProvider marketDataProvider, ILogger<StockListImportService> logger)
+    public StockListImportService(
+        IStockInfoRepository stockInfoRepository,
+        IMarketDataProvider marketDataProvider,
+        ILogger<StockListImportService> logger)
     {
-        _stockPriceRepository = stockPriceRepository;
+        _stockInfoRepository = stockInfoRepository;
         _marketDataProvider = marketDataProvider;
         _logger = logger;
     }
 
-    public async Task ImportStockListAsync()
+    public async Task RefreshStockListAsync()
     {
+        try
+        {
+            await _stockInfoRepository.TruncateStockListAsync();
+            _logger.LogInformation("Truncated stock list successfully.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to truncate stock list.");
+            return;
+        }
+
         var endpoints = new string[] { IsinTwseEndpoint, IsinTpexEndpoint };
 
         foreach (var endpoint in endpoints)
@@ -40,7 +53,7 @@ public class StockListImportService
                 _ => "unknown"
             };
 
-            await _stockPriceRepository.AddStocksAsync(list, market);
+            await _stockInfoRepository.AddStocksAsync(list, market);
         }
     }
 }

@@ -1,6 +1,4 @@
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using StockPriceCalculator.Api.Contracts.Stocks;
 using StockPriceCalculator.Application.Stocks.Commands;
 using StockPriceCalculator.Application.Stocks.Handlers;
@@ -64,13 +62,12 @@ namespace StockPriceCalculator.Api.Controllers
             return Ok(data); // 200 + body
         }
 
-
-        [HttpGet("import-list")]
-        public async Task<ActionResult> ImportIsinStockList()
+        [HttpGet("refresh-list")]
+        public async Task<ActionResult> RefreshIsinStockList()
         {
-            await _stockListImportService.ImportStockListAsync();
+            await _stockListImportService.RefreshStockListAsync();
 
-            return Ok();
+            return Ok("Refresh successfully");
         }
 
         /// <summary>
