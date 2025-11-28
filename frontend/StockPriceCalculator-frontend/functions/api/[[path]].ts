@@ -3,6 +3,10 @@ interface Env {
     CLOUD_RUN_BASE_URL: string;
 }
 
+interface TokenResponse {
+    id_token: string
+}
+
 
 export const onRequest: PagesFunction<Env> = async (context) => {
     const { request, env } = context;
@@ -83,11 +87,9 @@ export const onRequest: PagesFunction<Env> = async (context) => {
         return new Response("Failed to get token: " + text, { status: 500 });
     }
 
-    const tokenJson = await tokenRes.json<any>();
+    const tokenJson = await tokenRes.json<TokenResponse>();
 
-    console.log("🔐 Token Response:", tokenJson);
-
-    const idToken = tokenJson.id_token as string;
+    const idToken = tokenJson.id_token;
 
     if (!idToken) {
         return new Response("No id_token in token response", { status: 500 });
