@@ -224,8 +224,8 @@ const totalSettlement = computed(() => {
           <thead>
             <tr>
               <th>#</th>
-              <th style="min-width: 220px;">股票（代號 / 名稱）</th>
               <th>交易日期</th>
+              <th style="min-width: 220px;">股票（代號 / 名稱）</th>
               <th>股數</th>
               <th>收盤價</th>
               <th>交割金額</th>
@@ -238,6 +238,11 @@ const totalSettlement = computed(() => {
               <td class="cell-center">
                 {{ index + 1 }}
               </td>
+              <!-- 日期 -->
+              <td>
+                <input v-model="row.rawDate" type="text" class="input" @change="onDateChanged(row)" inputmode="numeric"
+                  maxlength="8" />
+              </td>
 
               <!-- 股票 autocomplete -->
               <td>
@@ -248,12 +253,6 @@ const totalSettlement = computed(() => {
                   </span>
                   <span v-else class="muted">尚未選擇股票</span>
                 </div>
-              </td>
-
-              <!-- 日期 -->
-              <td>
-                <input v-model="row.rawDate" type="text" class="input" @change="onDateChanged(row)" inputmode="numeric"
-                  maxlength="8" />
               </td>
 
               <!-- 股數 -->
