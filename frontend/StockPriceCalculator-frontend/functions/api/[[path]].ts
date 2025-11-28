@@ -3,6 +3,7 @@ interface Env {
     CLOUD_RUN_BASE_URL: string;
 }
 
+
 export const onRequest: PagesFunction<Env> = async (context) => {
     const { request, env } = context;
 
@@ -83,6 +84,8 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     }
 
     const tokenJson = await tokenRes.json<any>();
+
+    console.log("🔐 Token Response:", tokenJson);
 
     const idToken = tokenJson.id_token as string;
 

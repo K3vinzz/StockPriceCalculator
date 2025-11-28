@@ -18,6 +18,13 @@ export interface CalculateSettlementResponse {
     hasPriceData: boolean;
 }
 
+export interface AxiosErrorLike {
+    response?: {
+        data?: string;
+    };
+}
+
+
 export function calculateSettlement(payload: CalculateSettlementRequest) {
     return apiClient.post<CalculateSettlementResponse>('/api/stock/CalculateSettlement', payload);
 }

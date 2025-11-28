@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { reactive, computed, ref, nextTick } from 'vue';
-import { calculateSettlement, type Stock } from './api/stockApi';
+import { calculateSettlement, type Stock, type CalculateSettlementResponse, type AxiosErrorLike } from './api/stockApi';
 import StockInput from './api/components/StockInput.vue';
 
 type Row = {
@@ -10,14 +10,14 @@ type Row = {
   rawDate: string;
   date: string;
   quantity: number | null;
-  result: any | null;
+  result: CalculateSettlementResponse | null;
   isLoading: boolean;
   error: string;
   lastRequestKey: string | null;
 };
 
 const inputRefs = ref<Record<
-  number,
+  Row['id'],
   {
     date?: HTMLInputElement | null;
     quantity?: HTMLInputElement | null;
@@ -25,33 +25,33 @@ const inputRefs = ref<Record<
 >>({});
 
 type StockInputInstance = InstanceType<typeof StockInput>;
-const stockInputRefs = ref<Record<number, StockInputInstance | null>>({});
+const stockInputRefs = ref<Record<Row['id'], StockInputInstance | null>>({});
 
 function setInputRef(
-  rowIndex: number,
+  rowId: Row['id'],
   field: 'date' | 'quantity',
   el: HTMLInputElement | null
 ) {
-  if (!inputRefs.value[rowIndex]) {
-    inputRefs.value[rowIndex] = {};
+  if (!inputRefs.value[rowId]) {
+    inputRefs.value[rowId] = {};
   }
-  inputRefs.value[rowIndex][field] = el;
+  inputRefs.value[rowId][field] = el;
 }
 
-function setStockInputRef(rowIndex: number, el: StockInputInstance | null) {
-  stockInputRefs.value[rowIndex] = el;
+function setStockInputRef(rowId: Row['id'], el: StockInputInstance | null) {
+  stockInputRefs.value[rowId] = el;
 }
 
-function focusDate(rowIndex: number) {
-  inputRefs.value[rowIndex]?.date?.focus();
+function focusDate(rowId: Row['id']) {
+  inputRefs.value[rowId]?.date?.focus();
 }
 
-function focusStock(rowIndex: number) {
-  stockInputRefs.value[rowIndex]?.focus();
+function focusStock(rowId: Row['id']) {
+  stockInputRefs.value[rowId]?.focus();
 }
 
-function focusQuantity(rowIndex: number) {
-  inputRefs.value[rowIndex]?.quantity?.focus();
+function focusQuantity(rowId: Row['id']) {
+  inputRefs.value[rowId]?.quantity?.focus();
 }
 
 function handleDateEnter(index: number) {
@@ -248,9 +248,10 @@ async function autoCalculate(row: Row) {
     if (res.data?.hasPriceData) {
       addRowAfterSuccess(row);
     }
-  } catch (e: any) {
+  } catch (e) {
     console.error(e);
-    row.error = e?.response?.data ?? 'API 呼叫失敗';
+    const err = e as AxiosErrorLike;
+    row.error = err?.response?.data ?? 'API 呼叫失敗';
     row.result = null;
   } finally {
     row.isLoading = false;
@@ -310,13 +311,13 @@ const totalSettlement = computed(() => {
               <td>
                 <input v-model="row.rawDate" type="text" class="input" @change="onDateChanged(row)" inputmode="numeric"
                   maxlength="8" @keyup.enter="handleDateEnter(index)"
-                  :ref="el => setInputRef(index, 'date', el as HTMLInputElement | null)" />
+                  :ref="el => setInputRef(row.id, 'date', el as HTMLInputElement | null)" />
               </td>
 
               <!-- 股票 autocomplete -->
               <td>
                 <StockInput @select="stock => onStockSelected(row, stock)"
-                  :ref="el => setStockInputRef(index, el as StockInputInstance | null)"
+                  :ref="el => setStockInputRef(row.id, el as StockInputInstance | null)"
                   @enter-next="handleStockEnter(index)">
                 </StockInput>
                 <div class="selected-info">
@@ -331,7 +332,7 @@ const totalSettlement = computed(() => {
               <td>
                 <input v-model.number="row.quantity" type="number" min="1" step="1" class="input" placeholder="例如：1000"
                   @change="autoCalculate(row)" @keyup.enter="handleQuantityEnter(row, index)"
-                  :ref="el => setInputRef(index, 'quantity', el as HTMLInputElement | null)" />
+                  :ref="el => setInputRef(row.id, 'quantity', el as HTMLInputElement | null)" />
               </td>
 
               <!-- 收盤價 -->
