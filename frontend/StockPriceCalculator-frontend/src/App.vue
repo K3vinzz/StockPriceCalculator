@@ -54,12 +54,12 @@ function focusQuantity(rowId: Row['id']) {
   inputRefs.value[rowId]?.quantity?.focus();
 }
 
-function handleDateEnter(index: number) {
-  focusStock(index);
+function handleDateEnter(rowId: Row['id']) {
+  focusStock(rowId);
 }
 
-function handleStockEnter(index: number) {
-  focusQuantity(index);
+function handleStockEnter(rowId: Row['id']) {
+  focusQuantity(rowId);
 }
 
 async function handleQuantityEnter(row: Row, index: number) {
@@ -76,12 +76,16 @@ async function handleQuantityEnter(row: Row, index: number) {
   if (isLastRow) {
     // 最後一列：新增一列，再把 focus 移到新列的日期欄
     const newRow = createEmptyRow();
+    const newRowId = newRow.id;
     rows.push(newRow);
     await nextTick();
-    focusDate(rows.length - 1);
+    focusDate(newRowId);
   } else {
     // 還有下一列：跳到下一列的日期欄
-    focusDate(index + 1);
+    const nextRow = rows[index + 1];
+    if (nextRow) {
+      focusDate(nextRow.id);
+    }
   }
 }
 
@@ -310,7 +314,7 @@ const totalSettlement = computed(() => {
               <!-- 日期 -->
               <td>
                 <input v-model="row.rawDate" type="text" class="input" @change="onDateChanged(row)" inputmode="numeric"
-                  maxlength="8" @keyup.enter="handleDateEnter(index)"
+                  maxlength="8" @keyup.enter="handleDateEnter(row.id)"
                   :ref="el => setInputRef(row.id, 'date', el as HTMLInputElement | null)" />
               </td>
 
@@ -318,7 +322,7 @@ const totalSettlement = computed(() => {
               <td>
                 <StockInput @select="stock => onStockSelected(row, stock)"
                   :ref="el => setStockInputRef(row.id, el as StockInputInstance | null)"
-                  @enter-next="handleStockEnter(index)">
+                  @enter-next="handleStockEnter(row.id)">
                 </StockInput>
                 <div class="selected-info">
                   <span v-if="row.symbol">
