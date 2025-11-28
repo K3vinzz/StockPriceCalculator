@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { searchStocks, Stock, type StockSearchResponse } from '@/api/stockApi'
+import { searchStocks, Stock } from '@/api/stockApi'
 import debounce from 'lodash.debounce'
 
 const keyword = ref('')

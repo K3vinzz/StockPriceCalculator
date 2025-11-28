@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { reactive, computed } from 'vue';
+import { reactive, computed, ref, nextTick } from 'vue';
 import { calculateSettlement, type Stock } from './api/stockApi';
-import AutocompleteStock from './api/components/AutocompleteStock.vue';
 import StockInput from './api/components/StockInput.vue';
 
 type Row = {
@@ -16,6 +15,75 @@ type Row = {
   error: string;
   lastRequestKey: string | null;
 };
+
+const inputRefs = ref<Record<
+  number,
+  {
+    date?: HTMLInputElement | null;
+    quantity?: HTMLInputElement | null;
+  }
+>>({});
+
+type StockInputInstance = InstanceType<typeof StockInput>;
+const stockInputRefs = ref<Record<number, StockInputInstance | null>>({});
+
+function setInputRef(
+  rowIndex: number,
+  field: 'date' | 'quantity',
+  el: HTMLInputElement | null
+) {
+  if (!inputRefs.value[rowIndex]) {
+    inputRefs.value[rowIndex] = {};
+  }
+  inputRefs.value[rowIndex][field] = el;
+}
+
+function setStockInputRef(rowIndex: number, el: StockInputInstance | null) {
+  stockInputRefs.value[rowIndex] = el;
+}
+
+function focusDate(rowIndex: number) {
+  inputRefs.value[rowIndex]?.date?.focus();
+}
+
+function focusStock(rowIndex: number) {
+  stockInputRefs.value[rowIndex]?.focus();
+}
+
+function focusQuantity(rowIndex: number) {
+  inputRefs.value[rowIndex]?.quantity?.focus();
+}
+
+function handleDateEnter(index: number) {
+  focusStock(index);
+}
+
+function handleStockEnter(index: number) {
+  focusQuantity(index);
+}
+
+async function handleQuantityEnter(row: Row, index: number) {
+  // 判斷這一列是否「必填欄位都有值」
+  const hasAllRequired =
+    !!row.symbol && !!row.rawDate && !!row.quantity && row.quantity > 0;
+
+  if (!hasAllRequired) {
+    return; // 還沒填完就不要跳
+  }
+
+  const isLastRow = index === rows.length - 1;
+
+  if (isLastRow) {
+    // 最後一列：新增一列，再把 focus 移到新列的日期欄
+    const newRow = createEmptyRow();
+    rows.push(newRow);
+    await nextTick();
+    focusDate(rows.length - 1);
+  } else {
+    // 還有下一列：跳到下一列的日期欄
+    focusDate(index + 1);
+  }
+}
 
 function createEmptyRow(): Row {
   return {
@@ -241,12 +309,16 @@ const totalSettlement = computed(() => {
               <!-- 日期 -->
               <td>
                 <input v-model="row.rawDate" type="text" class="input" @change="onDateChanged(row)" inputmode="numeric"
-                  maxlength="8" />
+                  maxlength="8" @keyup.enter="handleDateEnter(index)"
+                  :ref="el => setInputRef(index, 'date', el as HTMLInputElement | null)" />
               </td>
 
               <!-- 股票 autocomplete -->
               <td>
-                <StockInput @select="stock => onStockSelected(row, stock)"></StockInput>
+                <StockInput @select="stock => onStockSelected(row, stock)"
+                  :ref="el => setStockInputRef(index, el as StockInputInstance | null)"
+                  @enter-next="handleStockEnter(index)">
+                </StockInput>
                 <div class="selected-info">
                   <span v-if="row.symbol">
                     {{ row.symbol }}（{{ row.market }}）
@@ -258,7 +330,8 @@ const totalSettlement = computed(() => {
               <!-- 股數 -->
               <td>
                 <input v-model.number="row.quantity" type="number" min="1" step="1" class="input" placeholder="例如：1000"
-                  @change="autoCalculate(row)" />
+                  @change="autoCalculate(row)" @keyup.enter="handleQuantityEnter(row, index)"
+                  :ref="el => setInputRef(index, 'quantity', el as HTMLInputElement | null)" />
               </td>
 
               <!-- 收盤價 -->
