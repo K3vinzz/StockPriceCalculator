@@ -154,8 +154,14 @@ public class MarketDataProvider : IMarketDataProvider
         // Encoding big5Encoding = Encoding.GetEncoding(950);
         // var html = await File.ReadAllTextAsync("isin_twse.txt", big5Encoding);
 
+        _logger.LogInformation("Fetched HTML for {endpoint}, length = {length}", endpoint, html.Length);
+
+        var preview = html.Length > 500 ? html[..500] : html;
+        _logger.LogInformation("HTML preview for {endpoint}: {preview}", endpoint, preview);
+
         return ParseIsinHtml(html);
     }
+
 
     private async Task<string> FetchIsinHtml(string endpoint)
     {
